@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 /// <summary>
@@ -45,11 +41,10 @@ public class CameraMovement : MonoBehaviour
     /// Set to true when free looking (on right mouse button).
     /// </summary>
     private bool looking = false;
-    public bool isEnabled = false;
 
     void Update()
     {
-        if (!isEnabled)
+        if (!looking)
             return;
         var fastMode = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
         var movementSpeed = fastMode ? this.fastMovementSpeed : this.movementSpeed;

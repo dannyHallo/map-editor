@@ -12,14 +12,13 @@ public class GridGen3D : MonoBehaviour
     [SerializeField] TextMeshProUGUI CubeIndecatorText;
     [SerializeField] UIManager uIManager;
     [SerializeField] AudioManager audioManager;
-    [SerializeField] GameObject sceneToFade;
-    [SerializeField] GameObject sceneToShow;
+    public GameObject popMenu;
+    public bool menuPoped;
 
     public bool isEnabled = false;
     float spacing = 2f;
     Vector3Int cursorId;
     Vector3Int lastCursorId;
-    bool mouseDragging = false;
     Vector3Int cursorStartId;
     Vector3Int lastCursorStartId;
     Vector3Int cursorEndId;
@@ -58,27 +57,25 @@ public class GridGen3D : MonoBehaviour
         // Generate(resolution);
     }
 
-    public void Generate(Vector3Int resolution)
+    public void Generate(Vector3Int gridSize)
     {
-        this.gridSize = resolution;
-        cameraMovement.isEnabled = true;
-        this.isEnabled = true;
+        this.gridSize = gridSize;
+        cameraMovement.StartLooking();
+        isEnabled = true;
 
-        buildingGrid = new Grid3D(resolution);
+        buildingGrid = new Grid3D(gridSize);
 
         // Generate floor
-        for (int z = 0; z < resolution.z; z++)
+        for (int z = 0; z < gridSize.z; z++)
         {
-            for (int x = 0; x < resolution.x; x++)
+            for (int x = 0; x < gridSize.x; x++)
             {
                 Vector3Int thisCubeGridId = new Vector3Int(x, 0, z);
                 InstantiateAndRegister(currentCube, thisCubeGridId, currentCubeId);
-
             }
         }
+        uIManager.BreakBlock(spacing, gridSize.x);
     }
-
-
 
     public void ExportJson()
     {
@@ -88,12 +85,12 @@ public class GridGen3D : MonoBehaviour
 
     public void ReadJson()
     {
+        cameraMovement.StartLooking();
+        isEnabled = true;
+
         String jsonStr = File.ReadAllText(Application.dataPath + "/save.json");
         Grid3D.GridDataContainer gridDataContainer = JsonUtility.FromJson<Grid3D.GridDataContainer>(jsonStr);
         gridSize = gridDataContainer.gridSize;
-
-        cameraMovement.isEnabled = true;
-        this.isEnabled = true;
 
         buildingGrid = new Grid3D(gridSize);
         for (int j = 0; j < gridSize.x * gridSize.y * gridSize.z; j++)
@@ -107,34 +104,63 @@ public class GridGen3D : MonoBehaviour
         }
         currentCube = cubeRegisteries[0].cube;
         currentCubeId = cubeRegisteries[0].id;
+        uIManager.BreakBlock(spacing, gridSize.x);
     }
 
     private void Update()
     {
-        if (!isEnabled)
-            return;
+        if (isEnabled)
+        {
+            // Select cube
+            CubeSelector();
 
-        KeyboardInput();
+            // Get cursor
+            GetSelectedGridId();
+            CleanAndDrawCurrentCursor();
 
-        // Select cube
-        CubeSelector();
+            // Draw
+            ClickAndDragHandler();
+        }
 
-        // Get cursor
-        GetSelectedGridId();
-        CleanAndDrawCurrentCursor();
-
-        // Draw
-        ClickAndDragHandler();
+        OuterInputDetection();
     }
-    void KeyboardInput()
+    void OuterInputDetection()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            isEnabled = false;
-            cameraMovement.isEnabled = false;
+            if (!menuPoped)
+            {
+                cameraMovement.StopLooking();
+                isEnabled = false;
+                DestroyAllCursors();
+                uIManager.MenuPop(popMenu);
 
-            uIManager.CallFadeMenu(sceneToFade, sceneToShow);
+                cursorStartId = new Vector3Int();
+                lastCursorStartId = new Vector3Int();
+                cursorEndId = new Vector3Int();
+                lastCursorEndId = new Vector3Int();
+                cursorIds = new Vector3Int[0];
+
+                menuPoped = true;
+            }
+            else
+            {
+                cameraMovement.StartLooking();
+                isEnabled = true;
+
+                uIManager.MenuFade(popMenu);
+                menuPoped = false;
+            }
         }
+        if (Input.GetMouseButtonDown(0) && menuPoped)
+        {
+            cameraMovement.StartLooking();
+            isEnabled = true;
+
+            uIManager.MenuFade(popMenu);
+            menuPoped = false;
+        }
+
     }
     void CubeSelector()
     {
@@ -179,7 +205,7 @@ public class GridGen3D : MonoBehaviour
             // Build upon
             else
             {
-                position = hit.transform.position + hit.normal;
+                position = hit.transform.position + spacing * hit.normal;
                 drawMode = 0;
             }
 
@@ -196,8 +222,6 @@ public class GridGen3D : MonoBehaviour
         if (Input.GetMouseButton(0))
         {
             cursorEndId = cursorId;
-            if (cursorStartId != cursorEndId)
-                mouseDragging = true;
         }
         if (Input.GetMouseButtonUp(0))
         {
@@ -205,20 +229,17 @@ public class GridGen3D : MonoBehaviour
             DrawCursorIds();
         }
 
-        if (mouseDragging)
+        if (CursorIdsUpdated())
         {
-            if (CursorIdsUpdated())
-            {
-                CleanAndDrawAllCursors();
-            }
+            CleanAndDrawAllCursors();
         }
+
     }
 
     void DrawCursorIds()
     {
         foreach (Vector3Int cursorId in cursorIds)
         {
-            audioManager.PlayClip("click");
             if (buildingGrid.SpaceOccupied(cursorId))
             {
                 Destroy(buildingGrid.GetCube(cursorId));
@@ -232,6 +253,8 @@ public class GridGen3D : MonoBehaviour
             }
 
         }
+        if (cursorIds.Length != 0)
+            audioManager.PlayClip("click");
     }
 
     void InstantiateAndRegister(GameObject cubePrefab, Vector3Int gridId, int cubeType)

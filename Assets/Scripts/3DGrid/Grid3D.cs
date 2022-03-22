@@ -82,7 +82,6 @@ public class Grid3D
             gridDataContainer.cubeTypes[j] = gridUnits[j].cubeType;
         }
         String str = JsonUtility.ToJson(gridDataContainer, true);
-        Debug.Log(str);
         return str;
     }
 }

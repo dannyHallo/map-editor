@@ -17,7 +17,7 @@ public class ButtonToolsAndFunctions : MonoBehaviour
     public GridGen3D gridGen3D;
 
     public ButtonName buttonName;
-    public enum ButtonName { Start, Create, Read, Export }
+    public enum ButtonName { Start, Create, Read, Export, Quit }
 
 
 
@@ -42,7 +42,8 @@ public class ButtonToolsAndFunctions : MonoBehaviour
 
     public void onPointerDown()
     {
-        audioManager.PlayClip("click");
+        if (buttonName != ButtonName.Export)
+            audioManager.PlayClip("click");
         text.text = "*" + buttonText + "*";
     }
 
@@ -52,19 +53,25 @@ public class ButtonToolsAndFunctions : MonoBehaviour
         {
             gridGen3D.Generate(
                 new Vector3Int(int.Parse(xInput.text), 5, int.Parse(zInput.text)));
+            uIManager.ChangeScene(sceneToFade, sceneToShow);
         }
         else if (buttonName == ButtonName.Read)
         {
             gridGen3D.ReadJson();
+            uIManager.ChangeScene(sceneToFade, sceneToShow);
         }
         else if (buttonName == ButtonName.Export)
         {
             gridGen3D.ExportJson();
+            audioManager.PlayClip("export");
+        }
+        else if (buttonName == ButtonName.Quit)
+        {
+            Application.Quit();
         }
 
-
-        if (sceneToShow && sceneToFade)
-            uIManager.CallFadeMenu(sceneToFade, sceneToShow);
+        // if (sceneToShow && sceneToFade)
+        //     uIManager.CallFadeMenu(sceneToFade, sceneToShow);
         text.text = buttonText;
     }
 }
