@@ -3,46 +3,15 @@ using System;
 using System.IO;
 using TMPro;
 
-public class GridGen3D : MonoBehaviour
+public class GridGen3D : GridBuilding
 {
-    public Vector3Int gridSize;
-    Grid3D buildingGrid;
-    [SerializeField] GameObject selector;
     [SerializeField] CameraMovement cameraMovement;
     [SerializeField] TextMeshProUGUI CubeIndecatorText;
     [SerializeField] UIManager uIManager;
     [SerializeField] AudioManager audioManager;
     public GameObject popMenu;
     public bool menuPoped;
-
     public bool isEnabled = false;
-    float spacing = 2f;
-    Vector3Int cursorId;
-    Vector3Int lastCursorId;
-    Vector3Int cursorStartId;
-    Vector3Int lastCursorStartId;
-    Vector3Int cursorEndId;
-    Vector3Int lastCursorEndId;
-    Vector3Int[] cursorIds;
-
-    GameObject currentCube;
-    int currentCubeId;
-    int drawMode = 0;
-    public CubeRegistery[] cubeRegisteries;
-    [Serializable]
-    public struct CubeRegistery
-    {
-        public int id;
-        public String text;
-        public GameObject cube;
-    }
-
-    [Serializable]
-    public struct GridDataContainer
-    {
-        public Vector3Int gridSize;
-        public int[] cubeTypes;
-    }
 
     // Debug function
     private void Awake()
@@ -63,7 +32,7 @@ public class GridGen3D : MonoBehaviour
         cameraMovement.StartLooking();
         isEnabled = true;
 
-        buildingGrid = new Grid3D(gridSize);
+        grid3D = new Grid3D(gridSize);
 
         // Generate floor
         for (int z = 0; z < gridSize.z; z++)
@@ -79,7 +48,7 @@ public class GridGen3D : MonoBehaviour
 
     public void ExportJson()
     {
-        String jsonStr = buildingGrid.GetJson();
+        String jsonStr = grid3D.GetJson();
         File.WriteAllText(Application.dataPath + "/save.json", jsonStr);
     }
 
@@ -89,19 +58,9 @@ public class GridGen3D : MonoBehaviour
         isEnabled = true;
 
         String jsonStr = File.ReadAllText(Application.dataPath + "/save.json");
-        Grid3D.GridDataContainer gridDataContainer = JsonUtility.FromJson<Grid3D.GridDataContainer>(jsonStr);
-        gridSize = gridDataContainer.gridSize;
 
-        buildingGrid = new Grid3D(gridSize);
-        for (int j = 0; j < gridSize.x * gridSize.y * gridSize.z; j++)
-        {
-            if (gridDataContainer.cubeTypes[j] != 0)
-            {
-                currentCube = cubeRegisteries[gridDataContainer.cubeTypes[j] - 1].cube;
-                currentCubeId = cubeRegisteries[gridDataContainer.cubeTypes[j] - 1].id;
-                InstantiateAndRegister(currentCube, buildingGrid.numToVec(j), currentCubeId);
-            }
-        }
+        GenerateGridByJson(jsonStr);
+
         currentCube = cubeRegisteries[0].cube;
         currentCubeId = cubeRegisteries[0].id;
         uIManager.BreakBlock(spacing, gridSize.x);
@@ -162,7 +121,8 @@ public class GridGen3D : MonoBehaviour
         }
 
     }
-    void CubeSelector()
+
+    protected void CubeSelector()
     {
         for (int i = 0; i < cubeRegisteries.Length; i++)
         {
@@ -176,44 +136,7 @@ public class GridGen3D : MonoBehaviour
         }
     }
 
-    void GetSelectedGridId()
-    {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
-
-        int LayerMask = 1 << 2;
-        LayerMask = ~LayerMask;
-
-        if (Physics.Raycast(ray, out hit, 2000, LayerMask))
-        {
-            if (hit.transform.tag != "Cube")
-                return;
-
-            Vector3 position;
-            // Replace
-            if (Input.GetKey(KeyCode.LeftControl))
-            {
-                position = hit.transform.position;
-                drawMode = 2;
-            }
-            // Delete
-            else if (Input.GetKey(KeyCode.LeftShift))
-            {
-                position = hit.transform.position;
-                drawMode = 1;
-            }
-            // Build upon
-            else
-            {
-                position = hit.transform.position + spacing * hit.normal;
-                drawMode = 0;
-            }
-
-            cursorId = HitPositionToGridId(position);
-        }
-    }
-
-    void ClickAndDragHandler()
+    protected void ClickAndDragHandler()
     {
         if (Input.GetMouseButtonDown(0))
         {
@@ -233,35 +156,25 @@ public class GridGen3D : MonoBehaviour
         {
             CleanAndDrawAllCursors();
         }
-
     }
 
-    void DrawCursorIds()
+    protected void DrawCursorIds()
     {
         foreach (Vector3Int cursorId in cursorIds)
         {
-            if (buildingGrid.SpaceOccupied(cursorId))
+            if (grid3D.SpaceOccupied(cursorId))
             {
-                Destroy(buildingGrid.GetCube(cursorId));
-                buildingGrid.DeregisterCube(cursorId);
+                Destroy(grid3D.GetCube(cursorId));
+                grid3D.DeregisterCube(cursorId);
             }
-
             // Replace or build mode
             if (drawMode != 1)
             {
                 InstantiateAndRegister(currentCube, cursorId, currentCubeId);
             }
-
         }
         if (cursorIds.Length != 0)
             audioManager.PlayClip("click");
-    }
-
-    void InstantiateAndRegister(GameObject cubePrefab, Vector3Int gridId, int cubeType)
-    {
-        GameObject thisCube = Instantiate(cubePrefab, GridIdToWorldPos(gridId), Quaternion.Euler(new Vector3(-90, 0, 0)));
-        thisCube.transform.parent = this.transform;
-        buildingGrid.RegisterCube(gridId, cubeType, thisCube);
     }
 
     bool CursorIdsUpdated()
@@ -294,58 +207,6 @@ public class GridGen3D : MonoBehaviour
         lastCursorEndId = cursorEndId;
         return true;
     }
-
-    void CleanAndDrawCurrentCursor()
-    {
-        // Refresh cursor when necessary
-        if (cursorId != lastCursorId && gridIdIsValid(cursorId))
-        {
-            DestroyAllCursors();
-            Instantiate(selector, GridIdToWorldPos(cursorId), Quaternion.identity);
-        }
-        lastCursorId = cursorId;
-    }
-
-    void CleanAndDrawAllCursors()
-    {
-        DestroyAllCursors();
-        foreach (Vector3Int cursorId in cursorIds)
-        {
-            Instantiate(selector, GridIdToWorldPos(cursorId), Quaternion.identity);
-        }
-    }
-
-    void DestroyAllCursors()
-    {
-        GameObject[] allCursors = GameObject.FindGameObjectsWithTag("Cursor");
-        foreach (GameObject cursor in allCursors)
-        {
-            Destroy(cursor);
-        }
-    }
-
-    public Vector3Int HitPositionToGridId(Vector3 pos)
-    {
-        Vector3Int gridId = new Vector3Int(
-            Mathf.FloorToInt((pos.x + spacing / 2) / spacing),
-            Mathf.FloorToInt(pos.y / spacing),
-            Mathf.FloorToInt((pos.z + spacing / 2) / spacing)
-        );
-        return gridId;
-    }
-
-    public bool gridIdIsValid(Vector3Int gridId)
-    {
-        // In bound
-        if (gridId.x < gridSize.x && gridId.y < gridSize.y && gridId.z < gridSize.z &&
-            gridId.x >= 0 && gridId.y >= 0 && gridId.z >= 0)
-            return true;
-        else
-            return false;
-    }
-
-    public Vector3 GridIdToWorldPos(Vector3Int id)
-    {
-        return new Vector3(id.x * spacing, id.y * spacing + spacing / 2, id.z * spacing);
-    }
 }
+
+

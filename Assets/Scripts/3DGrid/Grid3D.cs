@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class Grid3D
 {
-    Vector3Int gridSize;
+    public Vector3Int gridSize;
     public GridUnit[] gridUnits;
     public struct GridUnit
     {
@@ -71,6 +71,7 @@ public class Grid3D
             return null;
         }
     }
+
 
     public String GetJson()
     {
