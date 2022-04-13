@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-
+using System.IO;
 public class GridManagement : MonoBehaviour
 {
     public CubeRegistery[] cubeRegisteries;
@@ -46,6 +46,11 @@ public class GridManagement : MonoBehaviour
     /// <param name="cubeType">The serial number of the cube type</param>
     protected void InstantiateAndRegister(GameObject cubePrefab, Vector3Int gridId, int cubeType)
     {
+        if (GetCubeType(gridId, new Vector3Int(0, -1, 0)) == 4 || GetCubeType(gridId, new Vector3Int(0, -1, 0)) == 5)
+        {
+            print("bad position");
+            return;
+        }
         GameObject thisCube = Instantiate(cubePrefab, GridIdToWorldPos(gridId), Quaternion.Euler(new Vector3(-90, 0, 0)));
         thisCube.transform.parent = this.transform;
         grid3D.RegisterCube(gridId, cubeType, thisCube);
@@ -114,5 +119,31 @@ public class GridManagement : MonoBehaviour
             return true;
         else
             return false;
+    }
+
+    /// <summary>
+    /// Given the original grid id, look for the grid's cube type
+    /// </summary>
+    /// <param name="gridId">Original grid id</param>
+    /// <returns>The cube type you are looking for</returns>
+    public int GetCubeType(Vector3Int gridId)
+    {
+        if (!gridIdIsValid(gridId))
+            return -1;
+        return grid3D.GetCubeTypeByGridId(gridId);
+    }
+
+    /// <summary>
+    /// Given the original grid id, look for the grid's neighbour's cube type according to the drift
+    /// </summary>
+    /// <param name="gridId">Original grid id</param>
+    /// <param name="drift">The drift from the origin</param>
+    /// <returns>Its neighbour cube type, or -1, if its neighbour is null</returns>
+    public int GetCubeType(Vector3Int gridId, Vector3Int drift)
+    {
+        Vector3Int neighbourGridId = gridId + drift;
+        if (!gridIdIsValid(neighbourGridId))
+            return -1;
+        return grid3D.GetCubeTypeByGridId(neighbourGridId);
     }
 }

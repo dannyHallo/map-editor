@@ -45,10 +45,13 @@ public class Grid3D
 
     public bool SpaceOccupied(Vector3Int gridId)
     {
-        if (gridUnits[vecToNum(gridId)].cubeType != 0)
-            return true;
-        else
-            return false;
+        if (GetCubeTypeByGridId(gridId) != 0) return true;
+        return false;
+    }
+
+    public int GetCubeTypeByGridId(Vector3Int gridId)
+    {
+        return gridUnits[vecToNum(gridId)].cubeType;
     }
 
     public void DeregisterCube(Vector3Int gridId)
@@ -63,15 +66,9 @@ public class Grid3D
     public GameObject GetCube(Vector3Int gridId)
     {
         if (SpaceOccupied(gridId))
-        {
             return gridUnits[vecToNum(gridId)].cubePrefab;
-        }
-        else
-        {
-            return null;
-        }
+        return null;
     }
-
 
     public String GetJson()
     {
@@ -85,4 +82,5 @@ public class Grid3D
         String str = JsonUtility.ToJson(gridDataContainer, true);
         return str;
     }
+
 }
