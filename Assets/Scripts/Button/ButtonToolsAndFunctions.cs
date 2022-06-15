@@ -42,8 +42,7 @@ public class ButtonToolsAndFunctions : MonoBehaviour
 
     public void onPointerDown()
     {
-        if (buttonName != ButtonName.Export)
-            audioManager.PlayClip("click");
+        audioManager.PlayClip("click");
         text.text = "*" + buttonText + "*";
     }
 

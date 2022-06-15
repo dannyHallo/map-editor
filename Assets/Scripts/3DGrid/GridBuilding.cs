@@ -13,11 +13,12 @@ public class GridBuilding : GridManagement
     protected Vector3Int[] cursorIds;
     protected GameObject currentCube;
     protected int currentCubeId;
+    protected int navIndex;
     protected int drawMode = 0;
 
     protected void GetSelectedGridId()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        Ray ray = Camera.main.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2, 0));
         RaycastHit hit;
 
         int LayerMask = 1 << 2;
@@ -25,30 +26,37 @@ public class GridBuilding : GridManagement
 
         if (Physics.Raycast(ray, out hit, 2000, LayerMask))
         {
-            if (hit.transform.tag != "Cube")
-                return;
-
             Vector3 position;
-            // Replace
-            if (Input.GetKey(KeyCode.LeftControl))
+            if (hit.transform.tag == "Cube")
             {
-                position = hit.transform.position;
-                drawMode = 2;
-            }
-            // Delete
-            else if (Input.GetKey(KeyCode.LeftShift))
-            {
-                position = hit.transform.position;
-                drawMode = 1;
-            }
-            // Build upon
-            else
-            {
-                position = hit.transform.position + spacing * hit.normal;
-                drawMode = 0;
-            }
+                // Replace
+                if (Input.GetKey(KeyCode.LeftControl))
+                {
+                    position = hit.transform.position;
+                    drawMode = 2;
+                }
+                // Delete
+                else if (Input.GetKey(KeyCode.LeftShift))
+                {
+                    position = hit.transform.position;
+                    drawMode = 1;
+                }
+                // Build upon
+                else
+                {
+                    position = hit.transform.position + spacing * hit.normal;
+                    drawMode = 0;
+                }
 
-            cursorId = WorldPosToGridId(position);
+                cursorId = WorldPosToGridId(position);
+                print("Cursor: " + cursorId);
+            }
+            else if (hit.transform.tag == "Plane")
+            {
+                position = hit.point;
+                cursorId = WorldPosToGridId(position + new Vector3(0, 1, 0));
+                print("Cursor: " + cursorId);
+            }
         }
     }
 
@@ -66,6 +74,11 @@ public class GridBuilding : GridManagement
     protected void CleanAndDrawAllCursors()
     {
         DestroyAllCursors();
+        if (cursorIds.Length > 11000)
+        {
+            print("Too many cursors!");
+            return;
+        }
         foreach (Vector3Int cursorId in cursorIds)
         {
             Instantiate(selector, GridIdToWorldPos(cursorId), Quaternion.identity);

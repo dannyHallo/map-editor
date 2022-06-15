@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Cube
   - Cursor
+  - Plane
   layers:
   - Default
   - TransparentFX

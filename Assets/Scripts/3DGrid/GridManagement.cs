@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using System.IO;
+
 public class GridManagement : MonoBehaviour
 {
     public CubeRegistery[] cubeRegisteries;
@@ -32,7 +32,9 @@ public class GridManagement : MonoBehaviour
             {
                 GameObject currentCube = cubeRegisteries[gridDataContainer.cubeTypes[j] - 1].cube;
                 int currentCubeId = cubeRegisteries[gridDataContainer.cubeTypes[j] - 1].id;
-                InstantiateAndRegister(currentCube, serialNumToGridId(j), currentCubeId);
+                // int currentNavIndex = -1;
+                int currentNavIndex = gridDataContainer.navIndex[j];
+                InstantiateAndRegister(currentCube, serialNumToGridId(j), currentCubeId, currentNavIndex);
             }
         }
     }
@@ -44,17 +46,21 @@ public class GridManagement : MonoBehaviour
     /// <param name="cubePrefab">This prefab is used to instantiate cube into the world</param>
     /// <param name="gridId">The position of the cube in grid space</param>
     /// <param name="cubeType">The serial number of the cube type</param>
-    protected void InstantiateAndRegister(GameObject cubePrefab, Vector3Int gridId, int cubeType)
+    /// <param name="navIndex">The navigation index</param>
+    protected void InstantiateAndRegister(GameObject cubePrefab, Vector3Int gridId, int cubeType, int navIndex)
     {
         if (GetCubeType(gridId, new Vector3Int(0, -1, 0)) == 4 || GetCubeType(gridId, new Vector3Int(0, -1, 0)) == 5)
         {
-            print("bad position");
+            print("You can't place a cube above this type of cube!");
             return;
         }
+        
         GameObject thisCube = Instantiate(cubePrefab, GridIdToWorldPos(gridId), Quaternion.Euler(new Vector3(-90, 0, 0)));
         thisCube.transform.parent = this.transform;
-        grid3D.RegisterCube(gridId, cubeType, thisCube);
+        grid3D.RegisterCube(gridId, cubeType, thisCube, navIndex);
     }
+
+
 
     /// <summary>
     /// Converts grid id to world position

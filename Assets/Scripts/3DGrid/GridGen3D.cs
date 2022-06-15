@@ -1,6 +1,8 @@
 using UnityEngine;
 using System;
 using System.IO;
+using UnityEngine.UI;
+using System.Collections.Generic;
 using TMPro;
 
 public class GridGen3D : GridBuilding
@@ -9,6 +11,7 @@ public class GridGen3D : GridBuilding
     [SerializeField] TextMeshProUGUI CubeIndecatorText;
     [SerializeField] UIManager uIManager;
     [SerializeField] AudioManager audioManager;
+    public GameObject gridUnit;
     public GameObject popMenu;
     public bool menuPoped;
     public bool isEnabled = false;
@@ -23,7 +26,6 @@ public class GridGen3D : GridBuilding
         CubeIndecatorText.text = cubeRegisteries[0].text;
 
         cursorIds = new Vector3Int[0];
-        // Generate(resolution);
     }
 
     public void Generate(Vector3Int gridSize)
@@ -39,8 +41,18 @@ public class GridGen3D : GridBuilding
         {
             for (int x = 0; x < gridSize.x; x++)
             {
-                Vector3Int thisCubeGridId = new Vector3Int(x, 0, z);
-                InstantiateAndRegister(currentCube, thisCubeGridId, currentCubeId);
+                // Draw boundary
+                if (x == 0 || x == gridSize.x - 1 || z == 0 || z == gridSize.z - 1)
+                {
+                    Vector3Int thisCubeGridId = new Vector3Int(x, 0, z);
+                    GameObject thisGridUnit = Instantiate(gridUnit, GridIdToWorldPos(thisCubeGridId), Quaternion.identity);
+                    // thisGridUnit.transform.Find("GridImgAsset").GetComponent<Image>().color = new Color32(255, 0, 0, 100);
+                }
+                else if (x % 10 == 0 || z % 10 == 0)
+                {
+                    Vector3Int thisCubeGridId = new Vector3Int(x, 0, z);
+                    GameObject thisGridUnit = Instantiate(gridUnit, GridIdToWorldPos(thisCubeGridId), Quaternion.identity);
+                }
             }
         }
         uIManager.BreakBlock(spacing, gridSize.x);
@@ -83,10 +95,26 @@ public class GridGen3D : GridBuilding
 
         OuterInputDetection();
     }
+
+    void CleanNavigationIndex()
+    {
+        navIndex = 0;
+        foreach (GameObject objToBeDestroyed in grid3D.DeregisterWithType(4))
+        {
+            Destroy(objToBeDestroyed);
+        }
+    }
+
     void OuterInputDetection()
     {
+        if (Input.GetKeyDown(KeyCode.LeftAlt) && currentCubeId == 4)
+        {
+            CleanNavigationIndex();
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            // Popup menu
             if (!menuPoped)
             {
                 cameraMovement.StopLooking();
@@ -102,24 +130,23 @@ public class GridGen3D : GridBuilding
 
                 menuPoped = true;
             }
+            // Fold menu
             else
             {
                 cameraMovement.StartLooking();
-                isEnabled = true;
 
+                DestroyAllCursors();
+                cursorStartId = new Vector3Int();
+                lastCursorStartId = new Vector3Int();
+                cursorEndId = new Vector3Int();
+                lastCursorEndId = new Vector3Int();
+                cursorIds = new Vector3Int[0];
+
+                isEnabled = true;
                 uIManager.MenuFade(popMenu);
                 menuPoped = false;
             }
         }
-        if (Input.GetMouseButtonDown(0) && menuPoped)
-        {
-            cameraMovement.StartLooking();
-            isEnabled = true;
-
-            uIManager.MenuFade(popMenu);
-            menuPoped = false;
-        }
-
     }
 
     protected void CubeSelector()
@@ -131,7 +158,13 @@ public class GridGen3D : GridBuilding
                 audioManager.PlayClip("select");
                 currentCube = cubeRegisteries[i].cube;
                 currentCubeId = cubeRegisteries[i].id;
+                navIndex = 0;
                 CubeIndecatorText.text = cubeRegisteries[i].text;
+            }
+            if (currentCubeId == 4)
+            {
+                CubeIndecatorText.text = cubeRegisteries[i].text + " with this index: "
+                    + navIndex + ", Press alt to clear";
             }
         }
     }
@@ -160,8 +193,25 @@ public class GridGen3D : GridBuilding
 
     protected void DrawCursorIds()
     {
+        if (cursorIds.Length > 11000)
+        {
+            print("Too many cursors!");
+            return;
+        }
+
         foreach (Vector3Int cursorId in cursorIds)
         {
+            if (cursorId.x > gridSize.x - 1 ||
+                cursorId.y > gridSize.y - 1 ||
+                cursorId.z > gridSize.z - 1 ||
+                cursorId.x < 0 ||
+                cursorId.y < 0 ||
+                cursorId.z < 0)
+            {
+                print("Out of initialized bound! Please follow the grid!");
+                continue;
+            }
+
             if (grid3D.SpaceOccupied(cursorId))
             {
                 Destroy(grid3D.GetCube(cursorId));
@@ -170,7 +220,14 @@ public class GridGen3D : GridBuilding
             // Replace or build mode
             if (drawMode != 1)
             {
-                InstantiateAndRegister(currentCube, cursorId, currentCubeId);
+                // Navigation node
+                if (currentCubeId == 4)
+                {
+                    InstantiateAndRegister(currentCube, cursorId, currentCubeId, navIndex);
+                    navIndex++;
+                }
+                else
+                    InstantiateAndRegister(currentCube, cursorId, currentCubeId, -1);
             }
         }
         if (cursorIds.Length != 0)
