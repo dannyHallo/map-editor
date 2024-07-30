@@ -55,7 +55,7 @@ public class GridBuilding : GridManagement
             {
                 position = hit.point;
                 cursorId = WorldPosToGridId(position + new Vector3(0, 1, 0));
-                print("Cursor: " + cursorId);
+                // print("Cursor: " + cursorId);
             }
         }
     }

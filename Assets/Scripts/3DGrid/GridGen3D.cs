@@ -8,13 +8,15 @@ using TMPro;
 public class GridGen3D : GridBuilding
 {
     [SerializeField] CameraMovement cameraMovement;
-    [SerializeField] TextMeshProUGUI CubeIndecatorText;
-    [SerializeField] UIManager uIManager;
+    [SerializeField] TextMeshProUGUI cubeIndicatorText;
+    [SerializeField] TextMeshProUGUI rotationIndicatorText;
+    [SerializeField] UIManager uiManager;
     [SerializeField] AudioManager audioManager;
     public GameObject gridUnit;
     public GameObject popMenu;
     public bool menuPoped;
     public bool isEnabled = false;
+    private int currentRotationEncoded = 0;
 
     // Debug function
     private void Awake()
@@ -23,7 +25,7 @@ public class GridGen3D : GridBuilding
 
         currentCube = cubeRegisteries[0].cube;
         currentCubeId = cubeRegisteries[0].id;
-        CubeIndecatorText.text = cubeRegisteries[0].text;
+        cubeIndicatorText.text = cubeRegisteries[0].text;
 
         cursorIds = new Vector3Int[0];
     }
@@ -55,7 +57,7 @@ public class GridGen3D : GridBuilding
                 }
             }
         }
-        uIManager.BreakBlock(spacing, gridSize.x);
+        uiManager.BreakBlock(spacing, gridSize.x);
     }
 
     public void ExportJson()
@@ -75,7 +77,7 @@ public class GridGen3D : GridBuilding
 
         currentCube = cubeRegisteries[0].cube;
         currentCubeId = cubeRegisteries[0].id;
-        uIManager.BreakBlock(spacing, gridSize.x);
+        uiManager.BreakBlock(spacing, gridSize.x);
     }
 
     private void Update()
@@ -84,6 +86,9 @@ public class GridGen3D : GridBuilding
         {
             // Select cube
             CubeSelector();
+
+            // Select rotation
+            RotationSelector();
 
             // Get cursor
             GetSelectedGridId();
@@ -120,7 +125,7 @@ public class GridGen3D : GridBuilding
                 cameraMovement.StopLooking();
                 isEnabled = false;
                 DestroyAllCursors();
-                uIManager.MenuPop(popMenu);
+                uiManager.MenuPop(popMenu);
 
                 cursorStartId = new Vector3Int();
                 lastCursorStartId = new Vector3Int();
@@ -143,7 +148,7 @@ public class GridGen3D : GridBuilding
                 cursorIds = new Vector3Int[0];
 
                 isEnabled = true;
-                uIManager.MenuFade(popMenu);
+                uiManager.MenuFade(popMenu);
                 menuPoped = false;
             }
         }
@@ -159,13 +164,35 @@ public class GridGen3D : GridBuilding
                 currentCube = cubeRegisteries[i].cube;
                 currentCubeId = cubeRegisteries[i].id;
                 navIndex = 0;
-                CubeIndecatorText.text = cubeRegisteries[i].text;
+                cubeIndicatorText.text = cubeRegisteries[i].text;
+                ClearRotation();
             }
             if (currentCubeId == 4)
             {
-                CubeIndecatorText.text = cubeRegisteries[i].text + " with this index: "
+                cubeIndicatorText.text = cubeRegisteries[i].text + " with this index: "
                     + navIndex + ", Press alt to clear";
             }
+        }
+    }
+
+    protected void ClearRotation()
+    {
+        currentRotationEncoded = 0;
+        rotationIndicatorText.text = "Rotation: " + currentRotationEncoded;
+    }
+
+    protected void ChangeRotation()
+    {
+        currentRotationEncoded = (currentRotationEncoded + 1) % 4;
+        rotationIndicatorText.text = "Rotation: " + currentRotationEncoded;
+    }
+
+    protected void RotationSelector()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            audioManager.PlayClip("small_hit");
+            ChangeRotation();
         }
     }
 
@@ -223,11 +250,11 @@ public class GridGen3D : GridBuilding
                 // Navigation node
                 if (currentCubeId == 4)
                 {
-                    InstantiateAndRegister(currentCube, cursorId, currentCubeId, navIndex);
+                    InstantiateAndRegister(currentCube, cursorId, currentCubeId, navIndex, currentRotationEncoded);
                     navIndex++;
                 }
                 else
-                    InstantiateAndRegister(currentCube, cursorId, currentCubeId, -1);
+                    InstantiateAndRegister(currentCube, cursorId, currentCubeId, -1, currentRotationEncoded);
             }
         }
         if (cursorIds.Length != 0)

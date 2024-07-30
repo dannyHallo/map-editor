@@ -11,6 +11,7 @@ public class Grid3D
         public GameObject cubePrefab;
         public int cubeType;
         public int navIndex;
+        public int rotationEncoded;
     }
 
     [Serializable]
@@ -19,6 +20,7 @@ public class Grid3D
         public Vector3Int gridSize;
         public int[] cubeTypes;
         public int[] navIndex;
+        public int[] rotationEncoded;
     }
 
     public Grid3D(Vector3Int gridSize)
@@ -44,11 +46,12 @@ public class Grid3D
         return v.x + v.z * gridSize.x + v.y * gridSize.x * gridSize.z;
     }
 
-    public void RegisterCube(Vector3Int gridId, int cubeType, GameObject cubePrefab, int navIndex)
+    public void RegisterCube(Vector3Int gridId, int cubeType, GameObject cubePrefab, int navIndex, int rotationEncoded)
     {
         gridUnits[vecToNum(gridId)].cubeType = cubeType;
         gridUnits[vecToNum(gridId)].cubePrefab = cubePrefab;
         gridUnits[vecToNum(gridId)].navIndex = navIndex;
+        gridUnits[vecToNum(gridId)].rotationEncoded = rotationEncoded;
     }
 
     public bool SpaceOccupied(int n)
@@ -112,19 +115,21 @@ public class Grid3D
         return null;
     }
 
-    public String GetJson()
+    public string GetJson()
     {
-        GridDataContainer gridDataContainer = new GridDataContainer();
-        gridDataContainer.gridSize = this.gridSize;
-        gridDataContainer.cubeTypes = new int[gridSize.x * gridSize.y * gridSize.z];
-        gridDataContainer.navIndex = new int[gridSize.x * gridSize.y * gridSize.z];
+        GridDataContainer gridDataContainer = new GridDataContainer
+        {
+            gridSize = this.gridSize,
+            cubeTypes = new int[gridSize.x * gridSize.y * gridSize.z],
+            navIndex = new int[gridSize.x * gridSize.y * gridSize.z],
+            rotationEncoded = new int[gridSize.x * gridSize.y * gridSize.z]
+        };
         for (int j = 0; j < gridSize.x * gridSize.y * gridSize.z; j++)
         {
             gridDataContainer.cubeTypes[j] = gridUnits[j].cubeType;
             gridDataContainer.navIndex[j] = gridUnits[j].navIndex;
+            gridDataContainer.rotationEncoded[j] = gridUnits[j].rotationEncoded;
         }
-        String str = JsonUtility.ToJson(gridDataContainer, true);
-        return str;
+        return JsonUtility.ToJson(gridDataContainer, true);
     }
-
 }

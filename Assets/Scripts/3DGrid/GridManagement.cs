@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GridManagement : MonoBehaviour
@@ -7,6 +8,16 @@ public class GridManagement : MonoBehaviour
     protected Vector3Int gridSize;
     protected Grid3D grid3D;
     protected float spacing = 2f;
+
+
+    private static Dictionary<int, Quaternion> kRotationDict = new Dictionary<int, Quaternion>
+    {
+        {0, Quaternion.Euler(new Vector3(-90, 0, 0))},
+        {1, Quaternion.Euler(new Vector3(-90, 90, 0))},
+        {2, Quaternion.Euler(new Vector3(-90, 180, 0))},
+        {3, Quaternion.Euler(new Vector3(-90, 270, 0))},
+    };
+
 
     [Serializable]
     public struct CubeRegistery
@@ -32,9 +43,9 @@ public class GridManagement : MonoBehaviour
             {
                 GameObject currentCube = cubeRegisteries[gridDataContainer.cubeTypes[j] - 1].cube;
                 int currentCubeId = cubeRegisteries[gridDataContainer.cubeTypes[j] - 1].id;
-                // int currentNavIndex = -1;
                 int currentNavIndex = gridDataContainer.navIndex[j];
-                InstantiateAndRegister(currentCube, serialNumToGridId(j), currentCubeId, currentNavIndex);
+                int currentRotationEncoded = gridDataContainer.rotationEncoded[j];
+                InstantiateAndRegister(currentCube, serialNumToGridId(j), currentCubeId, currentNavIndex, currentRotationEncoded);
             }
         }
     }
@@ -47,20 +58,18 @@ public class GridManagement : MonoBehaviour
     /// <param name="gridId">The position of the cube in grid space</param>
     /// <param name="cubeType">The serial number of the cube type</param>
     /// <param name="navIndex">The navigation index</param>
-    protected void InstantiateAndRegister(GameObject cubePrefab, Vector3Int gridId, int cubeType, int navIndex)
+    protected void InstantiateAndRegister(GameObject cubePrefab, Vector3Int gridId, int cubeType, int navIndex, int rotationEncoded)
     {
         if (GetCubeType(gridId, new Vector3Int(0, -1, 0)) == 4 || GetCubeType(gridId, new Vector3Int(0, -1, 0)) == 5)
         {
             print("You can't place a cube above this type of cube!");
             return;
         }
-        
-        GameObject thisCube = Instantiate(cubePrefab, GridIdToWorldPos(gridId), Quaternion.Euler(new Vector3(-90, 0, 0)));
+
+        GameObject thisCube = Instantiate(cubePrefab, GridIdToWorldPos(gridId), kRotationDict[rotationEncoded]);
         thisCube.transform.parent = this.transform;
-        grid3D.RegisterCube(gridId, cubeType, thisCube, navIndex);
+        grid3D.RegisterCube(gridId, cubeType, thisCube, navIndex, rotationEncoded);
     }
-
-
 
     /// <summary>
     /// Converts grid id to world position
